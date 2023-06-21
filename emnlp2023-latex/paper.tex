@@ -54,6 +54,8 @@
 \useunder{\uline}{\ul}{}
 \newcommand{\todo}[1]{{\color{red}{#1}}}
 \newcommand{\our}{\mbox{\textsc{DocSplit}}}
+\newcommand{\ourbert}{$\our_{\mathrm{bert}}$}
+\newcommand{\ourlong}{$\our_{\mathrm{long}}$}
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
 %\setlength\titlebox{<dim>}
@@ -125,7 +127,7 @@ but effective and efficient document representation learning methods are less ex
 \label{overall}
 \end{figure}
 
-In this paper, we present the $\our$ which is the first unsupervised training method designed specifically for documents.
+In this paper, we present the $\our$ which is the first unsupervised pretraining method designed specifically for large documents.
 The training procedure of $\our$ can work with any model architecture to improve document representations. 
 Specifically, $\our$ uses contrastive learning,
 and our key contribution is a new method for generating positive samples for contrastive learning.
@@ -218,45 +220,82 @@ For negative instances, we use in-batch instances following previous contrastive
 \section{Experiments}
 
 \label{sec:experiments}
-In this section, we evaluate the effectiveness of our method by conducting text classification tasks. 
-To eliminate the influence of different model structures and focus on the quality of text embeddings. 
-We freeze the parameters of different text encoders and fine-tune only a multi-layer perceptron (MLP) to classify the embeddings of text encoders.
-We also visualize the attention weights between baselines and \our.
 
-\begin{table}[t]
-\centering
-    \input{fig/dataset}
-    \caption{Statistics of datasets. Ave. and Med. stand for the average and median number of words respectively in one data instance.}
-    \label{dataset}
-\end{table}
+We perform a careful ablation study to isolate the effects of the $\our$ pretraining method on downstream task performance.
+First, we generate two different sets of baseline models: one for models using the contrastive loss, and one for models designed for large document embeddings.
+We pretrain separate models for each group of baselines.
+Then, we perform downstream experiments on standard classification, few-shot learning, and information retrieval tasks.
+In all cases, models pretrained with $\our$ outperform models pretrained with other methods.
 
+%We first describe how we pretrain our model.
+%Then we describe our classification, few-shot learning, and information retrieval evaluation tasks.
+
+%We use a standard experimental setup to evaluate the effectiveness of \our.
+%First, we pretr
+%
+%We evaluate the effectiveness of \our~using a standard procedureby pretraining two models on English language wikipedia.
+%Then we finetune the model
+%
+%In this section, we evaluate the effectiveness of our method by conducting text classification tasks. 
+%To eliminate the influence of different model structures and focus on the quality of text embeddings. 
+%We freeze the parameters of different text encoders and fine-tune only a multi-layer perceptron (MLP) to classify the embeddings of text encoders.
+%We also visualize the attention weights between baselines and \our.
+%
+%We do not use semantic textual similarity (STS) tasks~\cite{Agirre2012SemEval2012T6} because the sentences in these tasks are short which is not suitable to evaluate large document embeddings.
 \begin{table*}
     \centering
 % \scalebox{0.7}{
 % \setlength{\tabcolsep}{1.mm}{
     \input{fig/result.tex}
     % }}
-    \caption{For all performance measures, larger numbers are better. Our pre-trained model achieves the best results in all cases. *INSTRUCTOR~\cite{Su2022OneEA} includes 20News in their pretraining datasets which causes data leakage in our experiments, hence INSTRUCTOR results on 20News are not comparable to others.}
+    \caption{Larger numbers are better. Our pre-trained model achieves the best results in all cases.}
     \vspace{-3mm}
     \label{results}
 \end{table*}
 
-\subsection{Pretraining Details}
-For pre-training, we start from the pretrained BERT-BASE model~\cite{Devlin2019BERTPO} and the Longformer~\cite{Beltagy2020LongformerTL} model~\footnote{The Longformer checkpoint is pretrained on long documents by MLM task and is available from Huggingface.} 
-We follow previous works~\cite{Gao2021SimCSESC, Li2022UCTopicUC}: the masked language model (MLM) loss and the contrastive learning loss are used concurrently with in-batch negatives. 
-We use English Wikipedia~\footnote{https://en.wikipedia.org/} articles as pretraining data and each article is viewed as one training instance. 
-The total number of training instances is 6,218,825. 
-Our pretraining learning rate is 5e-5, batch size is 36 and 12 for BERT and Longformer structure respectively. Our model is optimized by AdamW~\cite{Kingma2014AdamAM} in 1 epoch. 
-The temperature $\tau$ in the contrastive loss is set to $0.05$ and the weight of MLM is set to $0.1$ following previous work~\cite{Gao2021SimCSESC}.
-
-
 \subsection{Baselines}
-We compare our pre-trained model to the baselines of two groups.
-(1) Language models trained for general language understanding and sentence embeddings include BERT~\cite{Devlin2019BERTPO}, SimCSE~\cite{Gao2021SimCSESC}~\footnote{SimCSE can be viewed as an ablation model without document splitting.}, CT-BERT~\cite{Carlsson2021SemanticRW}, Contriever~\cite{Izacard2021UnsupervisedDI} and INSTRUCTOR~\cite{Su2022OneEA}. 
-For a fair comparison, we also train a SimCSE with our pretraining dataset (SimCSE$_\mathrm{long}$).
-(2) Transformers specified for long sequences include Longformer~\cite{Beltagy2020LongformerTL} and BigBird~\cite{Zaheer2020BigBT}.
-We train two versions of \our~with BERT and Longformer (i.e.,~\our$_\mathrm{bert}$ and \our$_{\mathrm{long}}$) for comparison.
-We do not include RoBERTa~\cite{Liu2019RoBERTaAR}, IS-BERT~\cite{Zhang2020AnUS} and GTR~\cite{Ni2021LargeDE} as our baselines because SimCSE and INSTRUCTOR achieve better results than these methods according to their papers.
+
+%In order to demonstrate that $\our$ is widely applicable,
+%we pretrain two models using two different architectures.
+
+All existing models pretrained with a contrastive loss are pretrained on the standard bert \cite{Devlin2019BERTPO} architecture.
+We therefore also pretrain a model using the bert architecture,
+and we call the resulting model \ourbert.
+The models trained with a contrastive loss that we compare \ourbert~to are SimCSE \cite{Gao2021SimCSESC}, CT-BERT~\cite{Carlsson2021SemanticRW}, Contriever~\cite{Izacard2021UnsupervisedDI} and INSTRUCTOR~\cite{Su2022OneEA}.\footnote{We do not compare to the popular RoBERTa~\cite{Liu2019RoBERTaAR}, IS-BERT~\cite{Zhang2020AnUS} and GTR~\cite{Ni2021LargeDE} models because SimCSE and INSTRUCTOR achieve better results than these methods according to their papers.}
+We will see that on all of our large document tasks, \ourbert~outperforms each of these other models.
+%Therefore, any performance differences we observe in model performance must be due to the pretraining method.
+
+We call the second model \ourlong~because it is pretrained on the LongFormer architecture \cite{Beltagy2020LongformerTL}.
+LongFormer uses a modified attention head that requires only $O(n)$ compute instead of the standard $O(n^2)$ that Bert uses,
+and so can handle larger context windows needed for large documents.
+Our \ourlong pretrained model inherits this computational advantage.
+We also compare to the BigBird~\cite{Zaheer2020BigBT} model,
+which is architecturally similar.
+
+\subsection{Pretraining Details}
+
+To pretrain both models, we follow the standard pretraining procedure for contrastive losses established by \citet{Gao2021SimCSESC} and \citet{Li2022UCTopicUC}.
+We simultaneously optimize both the masked language model (MLM) loss (with weight$=0.1$) and the contrastive loss (with temperature $\tau=0.05$).
+We use English Wikipedia articles as our pretraining dataset.
+These articles are long, and so we expect that a pretraining procedure designed for large documents will improve performance.
+The total number of training instances is 6,218,825.
+We use AdamW \cite{Kingma2014AdamAM} with a learning rate of 5e-5.
+\ourbert uses a batch size of 36.
+And due to the larger memory requirements of the LongFormer architecture,
+\ourlong uses a batchsize of 12.
+For both models, we know that performance improvements on downstream tasks must be due to the pretraining procedure and not the dataset because all baseline models include English language wikipedia in their training set.
+
+%\subsection{Baselines}
+%
+%We compare our two pre-trained model to baselines with similar architectures and different pretraining strategies.
+%
+%
+%For \ourbert
+%(1) Language models trained for general language understanding and sentence embeddings include BERT~\cite{Devlin2019BERTPO}, SimCSE~\cite{Gao2021SimCSESC}~\footnote{SimCSE can be viewed as an ablation model without document splitting.}, CT-BERT~\cite{Carlsson2021SemanticRW}, Contriever~\cite{Izacard2021UnsupervisedDI} and INSTRUCTOR~\cite{Su2022OneEA}. 
+%For a fair comparison, we also train a SimCSE with our pretraining dataset (SimCSE$_\mathrm{long}$).
+%(2) Transformers specified for long sequences include Longformer~\cite{Beltagy2020LongformerTL} and BigBird~\cite{Zaheer2020BigBT}.
+%We train two versions of \our~with BERT and Longformer (i.e.,~\our$_\mathrm{bert}$ and \our$_{\mathrm{long}}$) for comparison.
+
 
 \subsection{Text Classification}
 In the standard text classification task, we classify text embeddings with the full training set. 
@@ -269,11 +308,17 @@ We use the following classic documents datasets to evaluate our method:
 (3) arXiv articles dataset~\footnote{https://www.kaggle.com/datasets/Cornell-University/arxiv};
 (4) New York Times Annotated Corpus (NYT) ~\cite{sandhaus2008new}; and
 (5) BBCNews~\footnote{http://mlg.ucd.ie/datasets/bbc.html}.
-We do not use semantic textual similarity (STS) tasks~\cite{Agirre2012SemEval2012T6} because the sentences in these tasks are short which is not suitable to evaluate large document embeddings.
+
+%\begin{table}[t]
+%\centering
+\input{fig/dataset}
+%\label{dataset}
+%\end{table}
 
 \textbf{Results.}
 Table~\ref{results} shows the evaluation results on different datasets. 
 Overall, we can see that \our~achieves the best performance over the 4 document datasets (except INSTRUCTOR on 20News due to its data leakage) and consistently improves the document embeddings with BERT and Longformer structures. 
+INSTRUCTOR~\cite{Su2022OneEA} includes 20News in their pretraining datasets which causes data leakage in our experiments, hence INSTRUCTOR results on 20News are not comparable to others.
 Specifically, methods pretrained with contrastive objectives (i.e.,~CT-BERT, SimCSE, Contriever and INSTRUCTOR) outperform general language representations (i.e., BERT and LongFormer) which indicates contrastive objectives designed for text embeddings can largely improve the ability of language models to produce high-quality text embeddings. 
 SimCSE pretrained with our document data (i.e.,~SimCSE$_{\mathrm{long}}$) has similar results as the original SimCSE which indicates simply increasing the length of pretraining text cannot improve document embeddings.
 Under the same model structures, our model achieves $3.9\%$ and $9.4\%$ average macro-F1 improvements with BERT and Longformer structures respectively compared to SimCSE and Longformer. 
@@ -327,9 +372,10 @@ Results show that our pre-trained model greatly outperforms state-of-the-art tex
 \section*{Limitations}
 The limitations of our method are as follows:
 \begin{enumerate}[nosep,leftmargin=*]
-    \item Our method requires human-annotated data, which is expensive and time-consuming.
-    \item Our method focuses on document embeddings, we cannot claim the method works well for sentence embeddings.
-    \item Due to computing resource limitations, the text used in our work cannot be extremely long to verify the effectiveness of our method in this case.
+    %\item Our method requires human-annotated data, which is expensive and time-consuming.
+    \item Generative models cannot be trained using $\our$, but they can be trained using token masking.
+    \item We do not know how $\our$ will generalize to extremely large documents (e.g.\ book length).
+        We lack the computational resources to train models on these larger documents.
 \end{enumerate}
 
 \section*{Ethics Statement}
