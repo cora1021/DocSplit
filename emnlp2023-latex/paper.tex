@@ -10,6 +10,7 @@
 % Standard package includes
 \usepackage{times}
 \usepackage{latexsym}
+\usepackage{float}
 
 % For proper rendering and hyphenation of words containing Latin characters (including in bib files)
 \usepackage[T1]{fontenc}
@@ -56,6 +57,8 @@
 \newcommand{\our}{\mbox{\textsc{DocSplit}}}
 \newcommand{\ourbert}{$\our_{\mathrm{bert}}$}
 \newcommand{\ourlong}{$\our_{\mathrm{long}}$}
+
+\newcommand{\fixme}[1]{{\color{red}{FIXME: {#1}}}}
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
 %\setlength\titlebox{<dim>}
@@ -120,9 +123,15 @@ Generating high-quality text embeddings for documents is a long-standing open pr
 Most previous studies focus on either learning sentence-level representations~\cite{Hill2016LearningDR, Logeswaran2018AnEF, Gao2021SimCSESC} where training data usually contain short text or designing specific model structures for larger-range dependencies~\cite{Beltagy2020LongformerTL, Zaheer2020BigBT},
 but effective and efficient document representation learning methods are less explored.
 
-\begin{figure}[h]
+\begin{figure}
 \includegraphics[width=\columnwidth]{fig/docsplit.pdf}
-\caption{Overall framework of \our. The document is randomly divided into two exclusive subsets of sentences and the two subsets work as positive pairs for contrastive learning. Other instances in the same batch are used as negatives.
+    %\includegraphics[width=\columnwidth]{example-image-golden.pdf}
+\caption{
+    Document splitting ($\our$) is a new pretraining strategy that uses contrastive learning.
+    The hard part of contrastive learning is generating positive instances.
+    $\our$ generates these pairs from an input data point by randomly assigning each sentence in the input document to one of the pairs.
+    %For each sentence in the input document, the sentence is randomly assigned to one of the positive instances ({\color{blue}{$T_1^+$} or \color{green}{$T_2^+$}).
+    %Overall framework of \our. The document is randomly divided into two exclusive subsets of sentences and the two subsets work as positive pairs for contrastive learning. Other instances in the same batch are used as negatives.
 }
 \label{overall}
 \end{figure}
@@ -131,10 +140,10 @@ In this paper, we present the $\our$ which is the first unsupervised pretraining
 The training procedure of $\our$ can work with any model architecture to improve document representations. 
 Specifically, $\our$ uses contrastive learning,
 and our key contribution is a new method for generating positive samples for contrastive learning.
-To this end, we first investigate the information redundancy with two methods (details in Appendix~\ref{app:redundacy}) on five datasets for different lengths of documents.
-We find (1) information redundancy is larger as the length of the documents is increasing and (2) sentences from the same document usually contain repeated information. 
-Based on this observation, we can assume that the model can still learn the semantics of documents even if we drop some sentences. Hence, as shown in Figure~\ref{overall}, we randomly divide the original documents into two parts by sentences as positive pairs. Due to redundancies, our model can still recognize the two pairs have the same semantics. 
-The intuition behind this method is that we expect the model will pull representations of two subsets together in the latent space by paying more attention to common keywords so that the model can learn key information from documents automatically. 
+%To this end, we first investigate the information redundancy with two methods (details in Appendix~\ref{app:redundacy}) on five datasets for different lengths of documents.
+%We find (1) information redundancy is larger as the length of the documents is increasing and (2) sentences from the same document usually contain repeated information. 
+%Based on this observation, we can assume that the model can still learn the semantics of documents even if we drop some sentences. Hence, as shown in Figure~\ref{overall}, we randomly divide the original documents into two parts by sentences as positive pairs. Due to redundancies, our model can still recognize the two pairs have the same semantics. 
+%The intuition behind this method is that we expect the model will pull representations of two subsets together in the latent space by paying more attention to common keywords so that the model can learn key information from documents automatically. 
 
 To evaluate the quality of document embeddings, we conduct standard and few-shot text classification on five large document datasets involved in News and scientific articles. Moreover, to further validate the effectiveness of our method, we also conduct document retrieval on the AAN dataset which is designed for long document understanding evaluation.
 The experimental results show that \our~with two kinds of model structures (i.e.,~BERT and Longformer) can both achieve significant improvements compared to state-of-the-art baselines.
@@ -177,6 +186,18 @@ We conclude in Section~\ref{sec:conclusion} by emphasizing that all of our model
 
 \label{sec:method}
 In this section, we first formally define contrastive learning, then we describe our \our~method.
+
+%\subsection{Overview of Contrastive Learning}
+%
+%Contrastive learning is a method for unsupervised pretraining of deep neural networks.
+%The idea was first introduced by \citet{Hadsell2006DimensionalityRB},
+%but saw a resurgence in popularity when it was used to pretrain multi-purpose vision models \cite{Chen2020ASF}.
+%It then became widely used in the natural language processing community to generate state-of-the-art pretrained models.
+%
+%%The original BERT transformer architecture \citep{Devlin2019BERTPO} was pretrained with token masking.
+%In this section we provide an intuitive, non-mathematical overview of contrastive learning.
+%Contrastive learning is a 
+
 \subsection{Contrastive Learning}
 Contrastive Learning aims to learn effective representations by pulling semantically close neighbors together and pushing apart non-neighbors in the latent space~\cite{Hadsell2006DimensionalityRB}.
 It assumes a contrastive instance $\{x, x^{+}, x_1^{-},\dots,x_{N-1}^{-}\}$ including one positive and $N-1$ negative instances and their representations $\{\mathbf{h}, \mathbf{h}^{+}, \mathbf{h}_1^{-}, \dots,
@@ -187,45 +208,125 @@ we follow the contrastive learning framework~~\cite{Chen2020ASF, Li2022UCTopicUC
     l = -\log \frac{e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}^{+})/\tau}}{e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}^{+})/\tau}+ \sum_{i=1}^{N-1}e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}_i^{-})/\tau}}
 \end{equation}
 where $\tau$ is a temperature hyperparameter and $\mathrm{sim}(\mathbf{h}_1, \mathbf{h}_2)$ is the cosine similarity $\frac{\mathbf{h}_1^{\top}\mathbf{h}_2}{\Vert \mathbf{h}_1 \Vert \cdot \Vert \mathbf{h}_2 \Vert}$.
-In this work, we encode input texts using a pre-trained language model such as BERT~\cite{Devlin2019BERTPO}. Following BERT, we use the first special token \texttt{[CLS]} as the representation of the input and fine-tune all the parameters using the contrastive learning objective in Equation~\ref{cl}.
 
-\subsection{DocSplit}
-The critical problem in contrastive learning is how to construct positive pairs $(x, x^{+})$.
-In representation learning for visual tasks~\cite{Chen2020ASF}, an effective solution is to take two random transformations of the same image (e.g.,~flipping, rotation).
-Similarly, in language representations, previous works~\cite{Gao2021SimCSESC, Karpukhin2020DensePR, Meng2021COCOLMCA, Li2022UCTopicUC} apply augmentation techniques such as dropout, word deletion, reordering, and masking.
-
-In this paper, we propose a new method to construct positive instances for documents. 
-The basic idea of positive instance construction for contrastive learning is adding random noises to the original data for augmentation. 
-The augmented data should have similar representations to the original data. 
-Models trained by contrastive losses on augmented data will have an increased ability to learn important features in the data.
-To add random noises in documents, we find documents usually has higher information redundancy than sentences (Table~\ref{redundancy} in Appendix). 
-With this observation, we can have an assumption: 
-the semantics of a document will not be changed even if we drop half of the document. 
-We can construct positive pairs under this assumption easily on any text dataset without supervision.
-Specifically, for each document in the dataset, we randomly split sentences in the document into two subsets and the two sentence sets do not have intersections. 
-In the two subsets, we keep the order of sentences in the original document to form two new documents. 
-According to our assumption, the two new documents should have the same semantics and hence they are used as a positive pair in contrastive learning. 
-
-Consider an example (in Figure~\ref{overall}) to understand our positive instance construction process:
-Suppose we have a document $T = (s_1, s_2,\dots,s_n)$ where $s_i$ is the $i$-th sentence in document and $n$ is the number of sentences, each sentence will be sent to anchor set or positive set with the same probability ($50\%$). 
-The sentences in the same set (i.e.,~anchor or positive) will be concatenated in the same order of $T$ to form one positive pair $(T^+_1, T^+_2)$ for contrastive learning. 
-Positive pairs constructed by this method will not contain the same sentence and hence prevent models from overfitting on recognizing the same sentences. 
-Instead, models are guided to learn keywords appearing in positive instances so as to improve the ability to recognize key information. 
-We split the document at sentence level instead of word level (e.g.,~word deletion for augmentation) because the word-level splitting will cause the discrepancy between pretraining and finetuning and then lead to performance decay.
+%In this work, we encode input texts using a pre-trained language model such as BERT~\cite{Devlin2019BERTPO}. Following BERT, we use the first special token \texttt{[CLS]} as the representation of the input and fine-tune all the parameters using the contrastive learning objective in Equation~\ref{cl}.
 
 For negative instances, we use in-batch instances following previous contrastive frameworks~\cite{Gao2021SimCSESC, Li2022UCTopicUC}.
+The critical problem in contrastive learning is how to construct positive pairs $(x, x^{+})$.
+%In representation learning for visual tasks~\cite{Chen2020ASF}, an effective solution is to take two random transformations of the same image (e.g.,~flipping, rotation).
+%Similarly, in language representations, previous works~\cite{Gao2021SimCSESC, Karpukhin2020DensePR, Meng2021COCOLMCA, Li2022UCTopicUC} apply augmentation techniques such as dropout, word deletion, reordering, and masking.
 
+\subsection{Document Splitting ($\our$)}
+Our main contribution is the $\our$ method to construct positive instances for documents. 
+The idea is simple to describe and implement.
+Given an input document, we first split the document into sentences.
+Then each sentence is randomly assigned to eith
+
+There are several intuitive reasons why we should expect $\our$
+~to generate good document pairs.
+First, we can think of each positive instance as a summary of the original document.
+Second, our splitting strategy captures global information about the document.
+
+%The basic idea of positive instance construction for contrastive learning is adding random noises to the original data for augmentation. 
+%The augmented data should have similar representations to the original data. 
+%Models trained by contrastive losses on augmented data will have an increased ability to learn important features in the data.
+%To add random noises in documents, we find documents usually has higher information redundancy than sentences (Table~\ref{redundancy} in Appendix). 
+%With this observation, we can have an assumption: 
+%the semantics of a document will not be changed even if we drop half of the document. 
+%We can construct positive pairs under this assumption easily on any text dataset without supervision.
+%Specifically, for each document in the dataset, we randomly split sentences in the document into two subsets and the two sentence sets do not have intersections. 
+%In the two subsets, we keep the order of sentences in the original document to form two new documents. 
+%According to our assumption, the two new documents should have the same semantics and hence they are used as a positive pair in contrastive learning. 
+%
+%Consider an example (in Figure~\ref{overall}) to understand our positive instance construction process:
+%Suppose we have a document $T = (s_1, s_2,\dots,s_n)$ where $s_i$ is the $i$-th sentence in document and $n$ is the number of sentences, each sentence will be sent to anchor set or positive set with the same probability ($50\%$). 
+%The sentences in the same set (i.e.,~anchor or positive) will be concatenated in the same order of $T$ to form one positive pair $(T^+_1, T^+_2)$ for contrastive learning. 
+%Positive pairs constructed by this method will not contain the same sentence and hence prevent models from overfitting on recognizing the same sentences. 
+%Instead, models are guided to learn keywords appearing in positive instances so as to improve the ability to recognize key information. 
+%We split the document at sentence level instead of word level (e.g.,~word deletion for augmentation) because the word-level splitting will cause the discrepancy between pretraining and finetuning and then lead to performance decay.
+
+\section{Related Work}
+\label{sec:related}
+
+There are two categories of related work:
+models trained using contrastive learning,
+and models designed for large documents.
+
+\subsection{Contrastive Pretraining}
+\label{sec:contrastive}
+
+Contrastive learning has shown remarkable recent success for developing sentence embeddings.
+The simplest method is SimCSE \cite{Gao2021SimCSESC},
+which uses dropout to generate correlated positive samples.
+The contrastive tension method \cite{Carlsson2021SemanticRW} is similarly generic,
+but has a much more complicated implementation involving multiple models trained jointly.
+Because both of these pretraining strategies are generic,
+they can be used with any type of input including documents;
+but they do not take explicit advantage of document structure.
+%CT-BERT \cite{Carlsson2021SemanticRW} uses a pair of training models (contrastive tension).
+The INSTRUCTOR model \cite{Su2022OneEA} is the current state-of-the-art model for most downstream tasks.
+The contrastive objective for this model requires a specially constructed corpus of manual-human annotations,
+and this corpus is limited only to sentence-level annotations instead of document-level annotations.
+We show that our model significantly improves on INSTRUCTOR on document level tasks, and it is not clear how to extend the INSTRUCTOR model to document-level tasks because human annotation for documents is significantly more expensive than for sentences.
+The Contriever model \cite{Izacard2021UnsupervisedDI} uses a contrastive objective most similar to our own.
+They use the inverse cloze and document cropping tasks for pretraining.
+In document cropping, a document is divided in half and the two halves are used as the positive samples;
+in inverse cloze, a contiguous substring of the document is used as one positive sample and all other strings are used as the negative sample.
+The $\our$ pretraining method can be seen as a generalization of these methods.
+%It is evaluated only on information retrieval setting.
+%INSTRUCTOR~\cite{Su2022OneEA} uses instruction tuning.
+%They create a manually annotated corpus of 330 different datasets.
+
+\subsection{Large Document Architectures}
+
+%In order to demonstrate that $\our$ is widely applicable,
+%we pretrain two models using two different architectures.
+
+All of the models discussed in Section \ref{sec:contrastive} above are based off of the BERT architecture \cite{Devlin2019BERTPO}.
+This architecture uses an attention mechanism that requires $O(n^2)$ memory and runtime,
+where $n$ is the size of the attention window.
+The maximum size of a document that a model can understand is limited by this window size,
+and so compute for these models scales quadratically with the length of the documents.
+
+A growing body of research focuses on developing new architectures with reduced computational requirements that enable processing larger documents.
+The LongFormer \cite{Beltagy2020LongformerTL} and BigBird \cite{Zaheer2020BigBT} models pioneered this line of research,
+and both models reduce the runtime of the attention mechanism to $O(n)$.
+%A variety of other architectures have subsequently been proposed like the Informer \cite{zhou2021informer}, Switch Transformer \cite{fedus2022switch}, Performer \cite{choromanski2020rethinking}, and LinFormer \cite{wang2020linformer}
+A variety of other architectures have subsequently been proposed \cite[e.g.][]{zhou2021informer,fedus2022switch,choromanski2020rethinking,wang2020linformer,liu2022ecoformer}.
+\citet{tay2022efficient} provide a survey of this large body of work.
+Importantly, all of this research focuses only on improving the computational aspects of model architecture,
+and none of these models use a training objective designed specifically for large documents.
+Because the $\our$~pretraining method is model agnostic,
+we can easily apply it to any of these newly proposed model architectures.
+For computational reasons, we limit our experimental comparisons in Section \ref{sec:experiments} below to the LongFormer and BigBird models since these are the two most influential model architectures designed for large documents.
+We find a large performance improvement when these models are trained with $\our$,
+and expect this performance improvement would extend to similar models as well.
+
+%We call the second model \ourlong~because it is pretrained on the LongFormer architecture \cite{Beltagy2020LongformerTL}.
+%LongFormer uses a modified attention head that requires only $O(n)$ compute instead of the standard $O(n^2)$ that Bert uses,
+%and so can handle larger context windows needed for large documents.
+%Our \ourlong pretrained model inherits this computational advantage.
+%We also compare to the BigBird~\cite{Zaheer2020BigBT} model,
+%which is architecturally similar.
 
 
 \section{Experiments}
 
 \label{sec:experiments}
 
+%To properly evaluate our $\our$~pretraining method against the related work described in Section \ref{sec:related} above,
+%we pretrain two different models.
+%The first model \ourbert~uses the same BERT architecture that all other contrastive models of Section \ref{sec:contrastive} were trained on.
+%The second model \ourlong~uses the LongFormer architecture.
+
 We perform a careful ablation study to isolate the effects of the $\our$ pretraining method on downstream task performance.
-First, we generate two different sets of baseline models: one for models using the contrastive loss, and one for models designed for large document embeddings.
-We pretrain separate models for each group of baselines.
+First, we pretrain separate models for each group of baseline models described in Section \ref{sec:related} above.
+%In particular, the \ourbert~model is trained on the BERT architecture and allows us to directly compare the performance of all contrastively pretrained models of \ref{sec:contrastive}.
+%\footnote{We do not compare to the popular RoBERTa~\cite{Liu2019RoBERTaAR}, IS-BERT~\cite{Zhang2020AnUS} and GTR~\cite{Ni2021LargeDE} models because SimCSE and INSTRUCTOR achieve better results than these methods according to their papers.}
+%The \ourlong~model is trained on the LongFormer architecture and allows to see how better pretraining drastically improves the performance of these architectures designed specifically for large documents.
 Then, we perform downstream experiments on standard classification, few-shot learning, and information retrieval tasks.
-In all cases, models pretrained with $\our$ outperform models pretrained with other methods.
+In all cases, our pretrained models significantly outperform prior work.
+
 
 %We first describe how we pretrain our model.
 %Then we describe our classification, few-shot learning, and information retrieval evaluation tasks.
@@ -246,33 +347,24 @@ In all cases, models pretrained with $\our$ outperform models pretrained with ot
     \centering
 % \scalebox{0.7}{
 % \setlength{\tabcolsep}{1.mm}{
-    \input{fig/result.tex}
+    \input{fig/result-simplified.tex}
     % }}
-    \caption{Larger numbers are better. Our pre-trained model achieves the best results in all cases.}
+    \caption{
+        In the text classification of Experiment 1, models pretrained with $\our$ outperform baseline models in all cases.
+        Larger numbers are better.
+    }
     \vspace{-3mm}
     \label{results}
 \end{table*}
 
-\subsection{Baselines}
-
-%In order to demonstrate that $\our$ is widely applicable,
-%we pretrain two models using two different architectures.
-
-All existing models pretrained with a contrastive loss are pretrained on the standard bert \cite{Devlin2019BERTPO} architecture.
-We therefore also pretrain a model using the bert architecture,
-and we call the resulting model \ourbert.
-The models trained with a contrastive loss that we compare \ourbert~to are SimCSE \cite{Gao2021SimCSESC}, CT-BERT~\cite{Carlsson2021SemanticRW}, Contriever~\cite{Izacard2021UnsupervisedDI} and INSTRUCTOR~\cite{Su2022OneEA}.\footnote{We do not compare to the popular RoBERTa~\cite{Liu2019RoBERTaAR}, IS-BERT~\cite{Zhang2020AnUS} and GTR~\cite{Ni2021LargeDE} models because SimCSE and INSTRUCTOR achieve better results than these methods according to their papers.}
-We will see that on all of our large document tasks, \ourbert~outperforms each of these other models.
-%Therefore, any performance differences we observe in model performance must be due to the pretraining method.
-
-We call the second model \ourlong~because it is pretrained on the LongFormer architecture \cite{Beltagy2020LongformerTL}.
-LongFormer uses a modified attention head that requires only $O(n)$ compute instead of the standard $O(n^2)$ that Bert uses,
-and so can handle larger context windows needed for large documents.
-Our \ourlong pretrained model inherits this computational advantage.
-We also compare to the BigBird~\cite{Zaheer2020BigBT} model,
-which is architecturally similar.
-
 \subsection{Pretraining Details}
+
+We pretrain two models on two different architectures.
+All prior work using contrastive learning discussed in Section \ref{sec:contrastive} above evaluates their pretraining methods on the BERT architecture.
+To fairly compare against these methods, we pretrain our \ourbert~model also on this architecture.
+Ultimately, however, we are interested in large document performance, and so we expect that a model architecture designed specifically for large documents will improve performance.
+We therefore also pretrain the \ourlong~model on the LongFormer architecture.
+This second model will be used to evaluate against other models designed specifically for large documents.
 
 To pretrain both models, we follow the standard pretraining procedure for contrastive losses established by \citet{Gao2021SimCSESC} and \citet{Li2022UCTopicUC}.
 We simultaneously optimize both the masked language model (MLM) loss (with weight$=0.1$) and the contrastive loss (with temperature $\tau=0.05$).
@@ -297,68 +389,88 @@ For both models, we know that performance improvements on downstream tasks must 
 %We train two versions of \our~with BERT and Longformer (i.e.,~\our$_\mathrm{bert}$ and \our$_{\mathrm{long}}$) for comparison.
 
 
-\subsection{Text Classification}
-In the standard text classification task, we classify text embeddings with the full training set. 
-Training details are in Appendix~\ref{app:details}.
+\subsection{Experiment 1: Text Classification}
+%In the standard text classification task, we classify text embeddings with the full training set. 
+%Training details are in Appendix~\ref{app:details}.
+%
+%\textbf{Datasets.}
+We fine tune \ourbert, \ourlong, and all baseline models on five standard document datasets.
+The datasets are summarized in the table below:%
+\footnote{Citations for the datasets are:
+Fake News Corpus \url{https://github.com/several27/FakeNewsCorpus};
+arXiv articles dataset~\url{https://www.kaggle.com/datasets/Cornell-University/arxiv};
+20NewsGroups~\cite{Lang1995NewsWeederLT};
+New York Times Annotated Corpus (NYT) ~\cite{sandhaus2008new}; and
+BBCNews~\url{http://mlg.ucd.ie/datasets/bbc.html}.
+}
 
-\textbf{Datasets.}
-We use the following classic documents datasets to evaluate our method:
-(1) Fake News Corpus~\footnote{https://github.com/several27/FakeNewsCorpus};
-(2) 20NewsGroups~\cite{Lang1995NewsWeederLT};
-(3) arXiv articles dataset~\footnote{https://www.kaggle.com/datasets/Cornell-University/arxiv};
-(4) New York Times Annotated Corpus (NYT) ~\cite{sandhaus2008new}; and
-(5) BBCNews~\footnote{http://mlg.ucd.ie/datasets/bbc.html}.
+\begin{table}[H]
+\centering
+~~\input{fig/dataset}
+\label{dataset}
+\end{table}
 
-%\begin{table}[t]
-%\centering
-\input{fig/dataset}
-%\label{dataset}
-%\end{table}
+\noindent
+Notice in particular that every dataset has documents that exceed the standard context window length of the BERT model.
+For these documents, we follow the standard procedure and truncate the documents before passing them to BERT-based models.
 
-\textbf{Results.}
-Table~\ref{results} shows the evaluation results on different datasets. 
-Overall, we can see that \our~achieves the best performance over the 4 document datasets (except INSTRUCTOR on 20News due to its data leakage) and consistently improves the document embeddings with BERT and Longformer structures. 
-INSTRUCTOR~\cite{Su2022OneEA} includes 20News in their pretraining datasets which causes data leakage in our experiments, hence INSTRUCTOR results on 20News are not comparable to others.
-Specifically, methods pretrained with contrastive objectives (i.e.,~CT-BERT, SimCSE, Contriever and INSTRUCTOR) outperform general language representations (i.e., BERT and LongFormer) which indicates contrastive objectives designed for text embeddings can largely improve the ability of language models to produce high-quality text embeddings. 
-SimCSE pretrained with our document data (i.e.,~SimCSE$_{\mathrm{long}}$) has similar results as the original SimCSE which indicates simply increasing the length of pretraining text cannot improve document embeddings.
-Under the same model structures, our model achieves $3.9\%$ and $9.4\%$ average macro-F1 improvements with BERT and Longformer structures respectively compared to SimCSE and Longformer. 
-Compared to the state-of-the-art model INSTRUCTOR, our model (\our$_{\mathrm{bert}}$) can achieve $3.4\%$ improvements.
-Hence, our contrastive learning method is effective for document embeddings.
+%\textbf{Results.}
+Table~\ref{results} shows the accuracy and F1 score of every model on these datasets.
+Notice that \ourbert~out performs all BERT-based models discussed in Section \ref{sec:contrastive},
+and \ourlong~outperforms all models on every dataset.
+There are no results for the INSTRUCTOR model on the 20News dataset because INSTRUCTOR was pretrained on this dataset and the authors state that evaluating INSTRUCTOR on datasets it was pretrained is incorrect due to data contamination.
+%Overall, we can see that \our~achieves the best performance over the 4 document datasets (except INSTRUCTOR on 20News due to its data leakage) and consistently improves the document embeddings with BERT and Longformer structures. 
+%INSTRUCTOR~\cite{Su2022OneEA} includes 20News in their pretraining datasets which causes data leakage in our experiments, hence INSTRUCTOR results on 20News are not comparable to others.
+%Specifically, methods pretrained with contrastive objectives (i.e.,~CT-BERT, SimCSE, Contriever and INSTRUCTOR) outperform general language representations (i.e., BERT and LongFormer) which indicates contrastive objectives designed for text embeddings can largely improve the ability of language models to produce high-quality text embeddings. 
+%SimCSE pretrained with our document data (i.e.,~SimCSE$_{\mathrm{long}}$) has similar results as the original SimCSE which indicates simply increasing the length of pretraining text cannot improve document embeddings.
+%Under the same model structures, our model achieves $3.9\%$ and $9.4\%$ average macro-F1 improvements with BERT and Longformer structures respectively compared to SimCSE and Longformer. 
+%Compared to the state-of-the-art model INSTRUCTOR, our model (\our$_{\mathrm{bert}}$) can achieve $3.4\%$ improvements.
+%Hence, our contrastive learning method is effective for document embeddings.
 
 
-\subsection{Few-shot Text Classification}
-To show the performance of different text embeddings under low-resource settings, we evaluate our model with few-shot training instances.
-Training details are in Appendix~\ref{app:details}.
+\subsection{Experiment 2: Few-shot Learning}
+
+Next we evaluate how $\our$~pretraining performs on classification tasks with a small number of training examples.
+We follow the standard procedure of artificially limiting the number of training examples used during training,
+and evaluating on the same test set.
+Figure 2 shows the classification accuracy on the 20News dataset as we vary the size of the training set.
+We see that \ourbert~outperforms all other BERT-based models accross all sample sizes.
+
+The results on other datasets and for LongFormer-based models are similar.
+A full set of results on other datasets is available in the Appendix.
 
 \begin{figure}
 \centering
 \includegraphics[width=0.8\linewidth]{fig/few_shot.pdf}
-\caption{Performance of different models with different numbers of instances per class under few-shot setting.}
+\caption{
+    \ourbert~outperforms all other BERT-based models in a few-shot classification task on the 20News dataset.
+    \fixme{change x-axis to ``training examples per class''; change $\our$ to \ourbert, you can export the figure in tex instead of pdf to get the latex support needed for the legend}
+}
 \label{few_shot}
 \end{figure}
 
-\textbf{Results.} 
-Table~\ref{results} shows the results of few-shot text classification on these five datasets. 
-We can see that, under the same model structure, \our~(i.e.,~\our$_{\mathrm{bert}}$ and \our$_{\mathrm{long}}$) achieves $12.0\%$ and $24.3\%$ macro-F1 improvements compared to SimCSE and Longformer respectively. 
-Surprisingly, INSTRUCTOR achieves low performance on the NYT and BBCNews under few-shot settings.
-%and achieves 0.028+0.082+2.03+0.769. 
-These improvements are higher than standard text classification. 
-Besides, we also compare the performance of different baselines (using BERT as a backbone) and \our$_{\mathrm{bert}}$ with different numbers of training instances on 20News. 
-The results in Figure~\ref{few_shot} show the improvements from our method become larger as the number of training instances decreases indicating the importance of high-quality document embeddings for low-resource settings. 
-Furthermore, our method achieves the best results under different numbers of training instances.
+%\textbf{Results.} 
+%Table~\ref{results} shows the results of few-shot text classification on these five datasets. 
+%We can see that, under the same model structure, \our~(i.e.,~\our$_{\mathrm{bert}}$ and \our$_{\mathrm{long}}$) achieves $12.0\%$ and $24.3\%$ macro-F1 improvements compared to SimCSE and Longformer respectively. 
+%Surprisingly, INSTRUCTOR achieves low performance on the NYT and BBCNews under few-shot settings.
+%%and achieves 0.028+0.082+2.03+0.769. 
+%These improvements are higher than standard text classification. 
+%Besides, we also compare the performance of different baselines (using BERT as a backbone) and \our$_{\mathrm{bert}}$ with different numbers of training instances on 20News. 
+%The results in Figure~\ref{few_shot} show the improvements from our method become larger as the number of training instances decreases indicating the importance of high-quality document embeddings for low-resource settings. 
+%Furthermore, our method achieves the best results under different numbers of training instances.
 
-\subsection{Document Retrieval}
+\subsection{Experiment 3: Document Retrieval}
 We conduct document retrieval to evaluate the ability to learn the similarity score between two vectors~\cite{Guo2016ADR} of documents. We follow the document retrieval experiment~\cite{Tay2020LongRA} and use the ACL Anthology Network (AAN)~\cite{Radev2009TheAA} dataset, which identifies if two papers have a citation link, a common setup used in long-form document matching~\cite{Jiang2019SemanticTM,Yang2020Beyond5T}.
 Specifically, for all baselines, we use models to obtain document embeddings and finetune an MLP layer on two concatenated embeddings to predict if two documents have a citation link.
 
 \textbf{Results.} 
-\begin{table*}
+\begin{table}
     \centering
     \input{fig/document_rerival.tex}
     \caption{}
     \vspace{-3mm}
     \label{retrieval}
-\end{table*}
+\end{table}
 Table~\ref{retrieval} shows the results of the document retrieval experiment on AAN dataset.
 We can find that our method achieves the best results due to the effectiveness of our pretraining methods based on document splitting.
 
@@ -379,7 +491,20 @@ The limitations of our method are as follows:
 \end{enumerate}
 
 \section*{Ethics Statement}
-We do not anticipate any major ethical concerns; learning document embedding is a fundamental problem in natural language processing. Ethical considerations seem low-risk for the specific datasets studied here because they are all published.
+
+Learning embeddings is a standard problem in natural language processing.
+Our approach uses standard training datasets and training procedures.
+There are therefore no direct ethical concerns with this research.
+%We hope that our pretrained models and pretraining strategies will become widely used,
+%but we have no control over whether
+%As with all tools, however, the embeddings our model provides can be used for either good or evil.
+
+Our total compute is relatively small.
+Pretraining our \ourbert~and \ourlong~models took about 1 month each on a standard desktop system with an NVidia 2080 GPU.
+Other models use larger GPU clusters that require considerably more energy.
+The finetuning procedures run in less than 1 day on the same system.
+
+%We do not anticipate any major ethical concerns; learning document embedding is a fundamental problem in natural language processing. Ethical considerations seem low-risk for the specific datasets studied here because they are all published.
 
 %\section*{Acknowledgements}
 
@@ -390,40 +515,6 @@ We do not anticipate any major ethical concerns; learning document embedding is 
 \clearpage
 \appendix
 \section{Appendix}
-
-\subsection{Related Work}
-
-\textbf{Text Embeddings}. Learning text embeddings is a fundamental task in natural language processing (NLP) which can be used in information retrieval~\cite{Thakur2021BEIRAH}, text similarity~\cite{Gao2021SimCSESC}, classification~\cite{Minaee2021DeepLB}, etc. Existing works focus on learning general text embeddings for different applications. SimCSE~\cite{Gao2021SimCSESC} augment training data by Dropout~\cite{Srivastava2014DropoutAS} to construct positive data for contrastive learning. Sentence-BERT~\cite{Reimers2019SentenceBERTSE} employs siamese and triplet network structures to compare the labeled sentences in the natural language inference (NLI) dataset. Contriever~\cite{Izacard2021UnsupervisedDI} learns text embeddings for information retrieval via contrastive learning considering multilingual corpus. INSTRUCTOR~\cite{Su2022OneEA} collects a massive dataset from 330 diverse NLP tasks and formulates all tasks into information retrieval tasks with prompts. 
-Previous works either rely on massive manually annotated data~\cite{Su2022OneEA, Reimers2019SentenceBERTSE} or focus only on short text (i.e.,~sentences) embeddings~\cite{Gao2021SimCSESC}.
-In this paper, we study unsupervised representation learning of document embeddings which usually have longer text than general sentence embeddings and this task brings new challenges for models to understand a document.
-
-\textbf{Model Structures for Documents}. Due to the limitations of Transformer~\cite{Vaswani2017AttentionIA} on long documents, Another line of work studies the efficient model structures which can be effective to encode documents. For example, Longformer~\cite{Beltagy2020LongformerTL} introduces an attention mechanism that scales linearly with sequence length, making it easy to process long documents. BigBird~\cite{Zaheer2020BigBT} proposes a sparse attention mechanism that reduces this quadratic dependency to linear. \citet{Bulatov2022RecurrentMT} combines the memory mechanism in LSTM~\cite{Hochreiter1997LongSM} with Transformer to let transformers encode extremely long sequences. Comparing these methods which focus on designing models for long documents, our work studies the effective training method for long documents which can be adopted to any model structures for pre-training.
-
-
-\subsection{Redundancy}
-\label{app:redundacy}
-\begin{table}[t]
-    \input{fig/redundancy}
-    \caption{Information redundancies for different lengths (i.e.,~word numbers) of text: (1) 0-50 (2) 51-100 (3) 101-200 (4) 201-300 (5) more than 300.}
-    \label{redundancy}
-\end{table}
-
-We evaluate the redundancy of the text by two methods: (1) counting the repeated verbs and nouns in the text; (2) comparing inner-document and inter-document sentence similarities.
-
-For (1), we first use SpaCy~\footnote{https://spacy.io/} to find verbs and nouns and get their lemmatizations. Intuitively, if the redundancy of a document is high, nouns and verbs will be repeated frequently to express the same topic. Hence, redundancies $R$ in our paper are computed as:
-\begin{equation}
-    R = \frac{N_{\mathrm{nouns, verbs}}}{D_{\mathrm{nouns, verbs}}}
-\end{equation}
-where $N_{\mathrm{nouns, verbs}}$ denotes the number of nouns and verbs in a document and $D_{\mathrm{nouns, verbs}}$ is the number of distinct nouns and verbs.
-
-For (2), we compute sentence similarities to compare inner-document and inter-document information. Specifically, we first split documents into sentences and encode these sentences with pre-trained SimCSE~\cite{Gao2021SimCSESC}. Then, we calculate cosine similarities for every two sentences in the same documents (i.e.,~inner-document) and from different documents (i.e.,~inter-document). Results from five datasets are shown in Table~\ref{sent_sim}. We can see that sentences in the same documents have higher similarities compared to sentences from different documents. These results show that sentences in the same documents usually contain repeated information and hence have higher redundancy (i.e.,~sentences expressing similar semantics).
-
-\label{app:sent_sim}
-\begin{table}[t]
-    \input{fig/sent_sim}
-    \caption{Inner-document and inter-document sentences similarities measured by SimCSE.}
-    \label{sent_sim}
-\end{table}
 
 \subsection{Training Details}
 \label{app:details}
