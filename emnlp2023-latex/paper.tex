@@ -487,14 +487,24 @@ A full set of results on other datasets is available in the Appendix.
 We conduct document retrieval to evaluate the ability to learn the similarity score between two vectors~\cite{Guo2016ADR} of documents. We follow the document retrieval experiment~\cite{Tay2020LongRA} and use the ACL Anthology Network (AAN)~\cite{Radev2009TheAA} dataset, which identifies if two papers have a citation link, a common setup used in long-form document matching~\cite{Jiang2019SemanticTM,Yang2020Beyond5T}.
 Specifically, for all baselines, we use models to obtain document embeddings and finetune an MLP layer on two concatenated embeddings to predict if two documents have a citation link.
 
-\textbf{Results.} 
-\begin{table}
-    \centering
-    \input{fig/document_rerival.tex}
-    \caption{}
-    \vspace{-3mm}
-    \label{retrieval}
-\end{table}
+%\textbf{Results.} 
+%\begin{table}
+%    \centering
+%   \input{fig/document_rerival.tex}
+%   \caption{}
+%   \vspace{-3mm}
+%   \label{retrieval}
+%\end{table}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{fig/retrieval_fig.pdf}
+\caption{}  
+\label{retrieval}
+\end{figure}
+
+
+
 Table~\ref{retrieval} shows the results of the document retrieval experiment on AAN dataset.
 We can find that our method achieves the best results due to the effectiveness of our pretraining methods based on document splitting.
 
