@@ -11,6 +11,7 @@
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{float}
+\usepackage{tikz}
 
 % For proper rendering and hyphenation of words containing Latin characters (including in bib files)
 \usepackage[T1]{fontenc}
@@ -119,13 +120,16 @@ Our experiments show that $\our$ outperforms other pretraining methods for docum
 
 \section{Introduction}
 
+%The standard transformer model 
+
 Generating high-quality text embeddings for documents is a long-standing open problem.
 Most previous studies focus on either learning sentence-level representations~\cite{Hill2016LearningDR, Logeswaran2018AnEF, Gao2021SimCSESC} where training data usually contain short text or designing specific model structures for larger-range dependencies~\cite{Beltagy2020LongformerTL, Zaheer2020BigBT},
 but effective and efficient document representation learning methods are less explored.
 
 \begin{figure}
-\includegraphics[width=\columnwidth]{fig/docsplit.pdf}
+    \includegraphics[width=\columnwidth]{fig/docsplit.pdf}
     %\includegraphics[width=\columnwidth]{example-image-golden.pdf}
+    %\input{fig/docsplit.tex}
 \caption{
     Document splitting ($\our$) is a new pretraining strategy that uses contrastive learning.
     The hard part of contrastive learning is generating positive instances.
@@ -136,17 +140,36 @@ but effective and efficient document representation learning methods are less ex
 \label{overall}
 \end{figure}
 
-In this paper, we present the $\our$ which is the first unsupervised pretraining method designed specifically for large documents.
-The training procedure of $\our$ can work with any model architecture to improve document representations. 
-Specifically, $\our$ uses contrastive learning,
+This paper presents $\our$, the first unsupervised pretraining method designed specifically for large documents.
+$\our$ is simple to use,
+and it can be applied to any model architecture to improve document representations. 
+$\our$ uses contrastive learning,
 and our key contribution is a new method for generating positive samples for contrastive learning.
+Figure \ref{overall} provides a graphical illustration of the method,
+and Section \ref{sec:method} describes the implementation details and intuition.
+
+Section \ref{sec:related} describes how $\our$ improves prior work.
+We begin by demonstrating that prior work on contrastive pretraining has focused only on sentence-level representations.
+Then we show that work on model architectures designed for large documents has ignored the problem of better pretraining methods designed to work with these architectures.
+
+%Our paper is organized as follows.
+%Section \ref{sec:method} formally describes the $\our$ pretraining method.
+%Section \ref{sec:related} describes t
+%We highlight how our $\our$ method improves on related contrastive learning frameworks like \texttt{SimCSE}
+
+In Section \ref{sec:experiments}, we describe two pretrained models based on the BERT architecture (for fair comparison to other contrastive losses) and the LongFormer architecture (for optimal performance on large documents).
+We evaluate these models on standard large document classification, few shot learning, and document retrieval tasks.
+We find that models pretrained using $\our$ significantly outperform models pretrained with all other published methods.
+
+%We conclude in Section~\ref{sec:conclusion} by emphasizing that all of our models and datasets are open source.
+
 %To this end, we first investigate the information redundancy with two methods (details in Appendix~\ref{app:redundacy}) on five datasets for different lengths of documents.
 %We find (1) information redundancy is larger as the length of the documents is increasing and (2) sentences from the same document usually contain repeated information. 
 %Based on this observation, we can assume that the model can still learn the semantics of documents even if we drop some sentences. Hence, as shown in Figure~\ref{overall}, we randomly divide the original documents into two parts by sentences as positive pairs. Due to redundancies, our model can still recognize the two pairs have the same semantics. 
 %The intuition behind this method is that we expect the model will pull representations of two subsets together in the latent space by paying more attention to common keywords so that the model can learn key information from documents automatically. 
 
-To evaluate the quality of document embeddings, we conduct standard and few-shot text classification on five large document datasets involved in News and scientific articles. Moreover, to further validate the effectiveness of our method, we also conduct document retrieval on the AAN dataset which is designed for long document understanding evaluation.
-The experimental results show that \our~with two kinds of model structures (i.e.,~BERT and Longformer) can both achieve significant improvements compared to state-of-the-art baselines.
+%To evaluate the quality of document embeddings, we conduct standard and few-shot text classification on five large document datasets involved in News and scientific articles. Moreover, to further validate the effectiveness of our method, we also conduct document retrieval on the AAN dataset which is designed for long document understanding evaluation.
+%The experimental results show that \our~with two kinds of model structures (i.e.,~BERT and Longformer) can both achieve significant improvements compared to state-of-the-art baselines.
 
 % The recurrent connections in models like the LSTM~\cite{Hochreiter1997LongSM} and GRU~\cite{Cho2014OnTP} allow information at all locations in the document to influence the final embedding,
 % but they are slow to train because the models must consider each word sequentially.
@@ -176,12 +199,6 @@ The experimental results show that \our~with two kinds of model structures (i.e.
 
 %Supervised methods cannot be used for large-scale pretraining of models, however, so we present the 
 
-Our paper is organized as follows.
-In Section~\ref{sec:method} we formally define the contrastive learning problem and our novel $\our$ training method.
-%We highlight how our $\our$ method improves on related contrastive learning frameworks like \texttt{SimCSE}
-In Section~\ref{sec:experiments} we develop a new experimental evaluation procedure for documents.
-We conclude in Section~\ref{sec:conclusion} by emphasizing that all of our models and datasets are open source.
-
 \section{Method}
 
 \label{sec:method}
@@ -202,7 +219,7 @@ In this section, we first formally define contrastive learning, then we describe
 Contrastive Learning aims to learn effective representations by pulling semantically close neighbors together and pushing apart non-neighbors in the latent space~\cite{Hadsell2006DimensionalityRB}.
 It assumes a contrastive instance $\{x, x^{+}, x_1^{-},\dots,x_{N-1}^{-}\}$ including one positive and $N-1$ negative instances and their representations $\{\mathbf{h}, \mathbf{h}^{+}, \mathbf{h}_1^{-}, \dots,
 \mathbf{h}_{N-1}^{-}\}$, where $x$ and $x^{+}$ are semantically related.
-we follow the contrastive learning framework~~\cite{Chen2020ASF, Li2022UCTopicUC} and take cross-entropy as our objective function:
+We follow the contrastive learning framework~~\cite{Chen2020ASF, Li2022UCTopicUC} and take cross-entropy as our objective function:
 \begin{equation}
 \label{cl}
     l = -\log \frac{e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}^{+})/\tau}}{e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}^{+})/\tau}+ \sum_{i=1}^{N-1}e^{\mathrm{sim}(\mathbf{h}, \mathbf{h}_i^{-})/\tau}}
@@ -220,12 +237,18 @@ The critical problem in contrastive learning is how to construct positive pairs 
 Our main contribution is the $\our$ method to construct positive instances for documents. 
 The idea is simple to describe and implement.
 Given an input document, we first split the document into sentences.
-Then each sentence is randomly assigned to eith
+Then each sentence is randomly assigned to either the $x$ or $x^+$ document.
 
-There are several intuitive reasons why we should expect $\our$
-~to generate good document pairs.
-First, we can think of each positive instance as a summary of the original document.
-Second, our splitting strategy captures global information about the document.
+This document splitting procedure results in two documents that can be thought of as ``summaries'' of the original document.
+These summaries will have similar semantic content,
+and the contrastive loss will ensure that these two documents have similar embeddings.
+Notice that because there is randomness in the document splitting procedure,
+multiple passes over the same data points will result in different contrastive instance pairs being generated.
+
+%There are several intuitive reasons why we should expect $\our$
+%~to generate good document pairs.
+%First, we can think of each positive instance as a summary of the original document.
+%Second, our splitting strategy captures global information about the document.
 
 %The basic idea of positive instance construction for contrastive learning is adding random noises to the original data for augmentation. 
 %The augmented data should have similar representations to the original data. 
@@ -268,8 +291,9 @@ The INSTRUCTOR model \cite{Su2022OneEA} is the current state-of-the-art model fo
 The contrastive objective for this model requires a specially constructed corpus of manual-human annotations,
 and this corpus is limited only to sentence-level annotations instead of document-level annotations.
 We show that our model significantly improves on INSTRUCTOR on document level tasks, and it is not clear how to extend the INSTRUCTOR model to document-level tasks because human annotation for documents is significantly more expensive than for sentences.
+
 The Contriever model \cite{Izacard2021UnsupervisedDI} uses a contrastive objective most similar to our own.
-They use the inverse cloze and document cropping tasks for pretraining.
+They use the document cropping and inverse cloze tasks for pretraining.
 In document cropping, a document is divided in half and the two halves are used as the positive samples;
 in inverse cloze, a contiguous substring of the document is used as one positive sample and all other strings are used as the negative sample.
 The $\our$ pretraining method can be seen as a generalization of these methods.
@@ -482,13 +506,36 @@ We conduct extensive experiments on text classification tasks under fully superv
 Results show that our pre-trained model greatly outperforms state-of-the-art text embeddings, especially when the training data is limited.
 
 \section*{Limitations}
-The limitations of our method are as follows:
-\begin{enumerate}[nosep,leftmargin=*]
-    %\item Our method requires human-annotated data, which is expensive and time-consuming.
-    \item Generative models cannot be trained using $\our$, but they can be trained using token masking.
-    \item We do not know how $\our$ will generalize to extremely large documents (e.g.\ book length).
-        We lack the computational resources to train models on these larger documents.
-\end{enumerate}
+
+%Our paper has three main limitations.
+%\item Generative models cannot be trained using $\our$, but they can be trained using token masking.
+
+We identify three limitations with our work.
+
+\textbf{Limitation 1:}
+We evaluate $\our$ using only three downstream tasks (classification, few-shot learning, and document retrieval),
+but pretrained models are useful in many other tasks as well.
+For example, the LongFormer \cite{Beltagy2020LongformerTL} is evaluated also on question answering and coreference resolution.
+We did not run these experiments only due to a lack of computational resources,
+and we hope that future work will evaluate the performance of $\our$ pretraining on other downstream tasks as well.
+We note, however, that our $\our$ experiments in some ways are more extensive than other papers' experiments.
+For example, the LongFormer paper does not include any information retrieval experiments, and we do.
+Also, the Contriever model \citep{Izacard2021UnsupervisedDI} was specifically designed for pretraining models for the downstream retrieval experiment task and only evaluates on this downstream task.
+We beat the Contriever model on this task and provide the classification and few-shot experiments in addition.
+
+\textbf{Limitation 2:}
+Our models are pretrained only on English wikipedia,
+but other models are pretrained on significantly larger datasets.
+For example, the LongFormer model was pretrained on English wikipedia and on the Books \citep{zhu2015aligning}, Real News \citep{zellers2019defending}, and Stories \citep{zellers2019defending} datasets.
+We pretrained on this smaller dataset only due to our limited computational resources.
+%For example, the INSTRUCTOR model was pretrained on a diverse range of 330 datatsets.
+Results in scaling laws \citep{kaplan2020scaling} suggest that pretraining on more data would significantly improve our models' performance,
+and so our results are reported results are likely underestimating the positive effects of $\our$ pretraining.
+
+\textbf{Limitation 3:}
+Our experiments do not evaluate how well $\our$ will work on extremely large (e.g.\ book length) documents.
+Existing large document model architectures like LongFormer \cite{Beltagy2020LongformerTL} and BigBird \cite{Zaheer2020BigBT} are still not efficient enough to train models on these extremely large documents.
+More work also needs to be done on generating suitable evaluation tasks in this extreme setting to understand $\our$ performance.
 
 \section*{Ethics Statement}
 
@@ -499,10 +546,11 @@ There are therefore no direct ethical concerns with this research.
 %but we have no control over whether
 %As with all tools, however, the embeddings our model provides can be used for either good or evil.
 
-Our total compute is relatively small.
-Pretraining our \ourbert~and \ourlong~models took about 1 month each on a standard desktop system with an NVidia 2080 GPU.
+Our total compute is relatively small and so we have a small environmental impact.
+Pretraining \ourbert took about 4 days on an Nvidia 2080 GPU with 11GB of RAM,
+and pretraining \ourlong took about 4 days with a \fixme{GPU}.
 Other models use larger GPU clusters that require considerably more energy.
-The finetuning procedures run in less than 1 day on the same system.
+The finetuning procedures run in less than 1 day on the same systems.
 
 %We do not anticipate any major ethical concerns; learning document embedding is a fundamental problem in natural language processing. Ethical considerations seem low-risk for the specific datasets studied here because they are all published.
 
