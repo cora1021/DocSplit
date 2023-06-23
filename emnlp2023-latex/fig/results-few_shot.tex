@@ -1,0 +1,29 @@
+%\begin{tabular}{@{}lR{0.75in}R{0.75in}R{0.75in}R{0.75in}R{0.75in}R{0.75in}@{}}
+\small
+\begin{tabular}{l|cccccccccc}
+\toprule
+ Datasets   & \multicolumn{2}{c}{FakeNews}     & \multicolumn{2}{c}{20News}         &\multicolumn{2}{c}{arXiv}     &\multicolumn{2}{c}{NYT}        & \multicolumn{2}{c}{BBCNews} \\
+ \cmidrule(l){1-1} 
+\cmidrule(l){2-3} 
+\cmidrule(l){4-5}
+\cmidrule(l){6-7}
+\cmidrule(l){8-9}
+\cmidrule(l){10-11}
+Metrics    & Acc & F1   & Acc & F1    & Acc & F1    & Acc & F1      & Acc & F1 \\
+
+\midrule
+\multicolumn{11}{c}{\textit{Few-shot Text Classification}}   \\
+\midrule
+BERT      &23.96  &23.73    &19.94  &18.71    &24.08  &10.14     &51.85  &43.90      &54.22  &52.73 \\
+CT-BERT      &23.71  &23.06    &24.11  &23.53    &27.02  &13.53     &47.23  &36.83      &59.56  &58.95   \\
+SimCSE      &25.04  &22.68    &42.63  &41.42    &32.61  &17.19     &86.51  &78.41      &83.56  &83.75    \\
+SimCSE$_{\mathrm{long}}$ &26.39  &23.26    &48.65  &47.81    &23.42 &12.66  &85.36 &75.90   &84.44  &83.96 \\
+Contriever     &24.17 &22.35  &54.27 &54.87  &33.19  &17.23     &84.73 & 77.62  &77.71 & 79.19        \\
+INSTRUCTOR  &26.11 &23.97 & -- & -- &33.51 &17.12 &32.38 &27.60 &52.67 &48.78 \\
+    \ourbert  &\textbf{27.79}  &\textbf{24.65}    &\textbf{55.79}  &\textbf{55.43}    &\textbf{35.79}  & \textbf{18.52}    &\textbf{90.52}  &\textbf{83.71}      &\textbf{86.86}  &\textbf{86.31}   \\
+\midrule
+LongFormer  &26.56  &25.12    &44.42  &42.41    &25.04  &13.36     &73.06  &54.87      &84.89  &85.47  \\
+BigBird      &25.36  &23.28    &39.14  &39.06    &23.62 &10.18  &86.66 &78.96   &79.11  &76.63 \\
+\ourlong  &\textbf{29.17}  &\textbf{27.13}    &\textbf{51.18}  &\textbf{50.96}    &\textbf{34.33}  &\textbf{18.80}   &\textbf{89.78}  &\textbf{82.88}      &\textbf{86.78}  &\textbf{86.66}  \\
+\bottomrule
+\end{tabular}

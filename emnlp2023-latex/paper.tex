@@ -591,7 +591,7 @@ There are therefore no direct ethical concerns with this research.
 
 Our total compute is relatively small and so we have a small environmental impact.
 Pretraining \ourbert took 4 days on an Nvidia 2080 GPU with 11GB of RAM,
-and pretraining \ourlong took 4 days with a \fixme{GPU}.
+and pretraining \ourlong took 4 days with an Nvidia Quadro RTX 8000 with 48GB of RAM.
 Other models use larger GPU clusters that require considerably more energy.
 The finetuning procedures run in less than 1 day on the same systems.
 
@@ -614,6 +614,20 @@ We fine-tune the last MLP layer on these five datasets and evaluate the classifi
 For few-shot text classification, we sample 10 data instances per class for the FakeNewsCorpus dataset and the arXiv dataset and 5 data instances per class for the other three datasets. 
 Other settings are the same as the standard text classification. 
 Since there is randomness in sampling, we repeat every experiment 10 times and take the average value of metrics.
+
+\subsection{Few-shot Learning}
+\begin{table}
+    \centering
+    \input{fig/results-few_shot.tex}
+    \caption{Few-shot classification on five datasets. }
+    \vspace{-3mm}
+    \label{tab:few_shot}
+\end{table}
+Table~\ref{tab:few_shot} shows the results of few-shot text classification on these five datasets. 
+We can see that, under the same model structure, \our~(i.e.,~\our$_{\mathrm{bert}}$ and \our$_{\mathrm{long}}$) achieves $12.0\%$ and $24.3\%$ macro-F1 improvements compared to SimCSE and Longformer respectively. 
+Surprisingly, INSTRUCTOR achieves low performance on the NYT and BBCNews under few-shot settings.
+These improvements are higher than standard text classification. 
+
 
 % \subsection{Attention Weights}
 % \label{app:attention}
