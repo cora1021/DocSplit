@@ -1,6 +1,37 @@
-\begin{tikz}
+\begin{tikzpicture}
 \small
-\node{
-Deep learning is part of a broader family 
+    \node[draw,thick,rounded corners=.05in] (doc) [label=above:original training document ($x$)]{
+\tiny
+    \parbox{2.5in}{
+    \color{blue}
+    Deep learning is part of a broader family  of machine learning methods based on artificial neural networks with representation learning.
+    \color{magenta}
+    Artificial neural networks were inspired by information processing and distributed communication nodes in biological systems.
+    \color{blue}
+    Artificial neural networks have various differences from biological brains.
+    \color{magenta}
+    Specifically, artifical neural networks tend to be static and symbolic, whereas the biological brain of most living organisms is dynamic and analog.
+    }
 };
-\end{tikz}
+\node[below=of doc,node distance=0.0in] (placeholder) {};
+    \node[draw,thick,rounded corners=.05in,left of=placeholder,node distance=0.1in,anchor=north east]  (x1) [label=above:document summary ($x_1^+$)] {
+    \tiny
+    \color{blue}
+    \parbox{1.2in}{
+    Deep learning is part of a broader family  of machine learning methods based on artificial neural networks with representation learning.
+    Artificial neural networks have various differences from biological brains.
+}};
+    \node[draw,thick,rounded corners=.05in,right of=placeholder,node distance=0.1in, anchor=north west] (x2) [label=above:document summary ($x_2^+$)]{
+    \tiny
+    \color{magenta}
+    \parbox{1.2in}{
+    Artificial neural networks were inspired by information processing and distributed communication nodes in biological systems.
+    Specifically, artifical neural networks tend to be static and symbolic, whereas the biological brain of most living organisms is dynamic and analog.
+}
+};
+
+    \node[above of=x1, node distance=0.51in] (x1a) {};
+    \node[above of=x2, node distance=0.61in] (x2a) {};
+    \draw[->,thick] (doc) -- (x1a);
+    \draw[->,thick] (doc) -- (x2a);
+\end{tikzpicture}
